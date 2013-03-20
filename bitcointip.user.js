@@ -1,13 +1,15 @@
 // ==UserScript==
 // @name         Extra Bitcointip Support on Reddit
 // @description  Add a tipping button (/u/bitcointip) and shrinks verifications
-// @version      1.4.5
+// @version      1.4.5-ninjaKit
 // @license      Public Domain
 // @include      http*://*.reddit.com/*
 // @exclude      http*://*.reddit.com/user/bitcointip
+// @require https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js
 // ==/UserScript==
-
 /* Changelog:
+ * 1.4.5-ninjakit
+ *    Made compatible with Safari/Ninjakit by removing the comment hider and tip bitcoins links as well as importing jquery for use inside of ninjakig
  * 1.4.5
  *    Fix currency display precision
  * 1.4.4
@@ -98,43 +100,6 @@ var $ = unsafeWindow.$,
 function identity(x) {
     return x;
 }
-
-/* Add the "tip bitcoins" button after "give gold". */
-var tip = $('<a>tip bitcoins</a>').attr({
-    'class': 'tip-bitcoins login-required',
-    'href': '#'
-});
-if (/^\/r\//.test(document.location.pathname)) {
-    $('a.give-gold').parent().after($('<li/>').append(tip.clone()));
-    if ($('.link').length === 1) { // Viewing a submission?
-        $('.link ul.buttons').append($('<li/>').append(tip.clone()));
-    }
-}
-
-/* Tipping button functionality. */
-$('.tip-bitcoins').on('click', function(event) {
-    var $target = $(event.target);
-    var form = null;
-    if ($target.closest('.link').length > 0) {
-        /* Post */
-        form = $('.usertext-edit').first();
-    } else {
-        /* Comment */
-        reddit.reply(event.target);
-        form = reddit.comment_reply_for_elem(event.target);
-    }
-    var textarea = form.find('textarea');
-    if (!textarea.val().match(tipregex)) {
-        var insert = '+tip ' + baseTip;
-        if (textarea.val().length > 0) {
-            insert = '\n\n' + insert;
-        } else {
-            insert = insert + '\n\n';
-        }
-        textarea.val(textarea.val() + insert);
-    }
-    return false;
-});
 
 /* Subreddit indicator. */
 var subreddit = (function(match) {
@@ -292,13 +257,6 @@ if (user != null && address == null) {
     };
 })(unsafeWindow.jQuery);
 
-/* Hide verification replies. Note: t2_7vw3n is /u/bitcointip. */
-$('a.id-t2_7vw3n').comment().each(function() {
-    var $this = $(this);
-    if ($this.commentChildren().length === 0 && !$this.isTarget()) {
-        reddit.hidecomment($this.find('.expand').first());
-    }
-});
 
 /* Find all the tip comments. */
 var tips = {};
@@ -334,7 +292,7 @@ if (tipIDs.length > 0 || inTipSubreddit) {
             tagline.append(icon.append($('<img/>').attr({
                 src: icons[tip.status],
                 style: iconStyle,
-                title: '+$' + tip.amountUSD + '	→  ' + tip.receiver + ' (' + tip.status + ')'
+                title: '+$' + tip.amountUSD + '    →  ' + tip.receiver + ' (' + tip.status + ')'
             })));
             confirmedIDs.push(id);
             tips[id].attr('id', 't1_' + id);
